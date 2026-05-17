@@ -1,34 +1,37 @@
-# yt-dlp API (Render デプロイ用)
+# yt-dlp API (Render対応)
 
-YouTube 動画のストリーミングURLを取得するシンプルなAPI。
+YouTube動画のストリーミングURLを取得するFastAPIサービス。
 
 ## エンドポイント
+- `GET /api/streams/{videoId}` — 全フォーマット直リンク
+- `GET /api/streams/{videoId}/m3u8` — HLSストリーム一覧 + best
+- `GET /api/streams/{videoId}/m3u8/raw` — m3u8プレイリスト本文
 
-- `GET /api/streams/{videoId}` — 全フォーマットのストリーミングURL一覧
-- `GET /api/streams/{videoId}/m3u8` — HLS (m3u8) URL のみ抽出 (best 付き)
-- `GET /api/streams/{videoId}/m3u8/raw` — m3u8 プレイリスト本体をそのまま返す
+## Bot判定対策(Cookie不要)
+以下を内蔵済み:
+- `player_client` を `tv` / `ios` / `mweb` / `android_vr` / `web_safari` / `web` の順でフォールバック
+- Safari の User-Agent を送信
+- リトライ(`retries=3`, `extractor_retries=3`)
+- `geo_bypass` 有効
 
-## Render へのデプロイ
+これで多くの場合 "Sign in to confirm you're not a bot" を回避できます。
 
-1. このフォルダを GitHub リポジトリに push
-2. [Render](https://render.com) で **New +** → **Blueprint** を選び、リポジトリを接続
-3. `render.yaml` が自動検出されてデプロイされます
+## どうしても通らない場合 (Render IPがブロックされた等)
+環境変数 `YT_COOKIES` に Netscape形式のCookieファイルの中身をそのまま貼り付けてください。
+```
+# Netscape HTTP Cookie File
+.youtube.com   TRUE   /   TRUE   1999999999   SID   xxxxxxxx
+...
+```
+Renderダッシュボード → Environment → Add Environment Variable で設定。
 
-または **New Web Service** から手動設定:
-- Runtime: Python 3
-- Build Command: `pip install -r requirements.txt`
-- Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+## デプロイ
+1. このフォルダをGitHubリポジトリにpush
+2. Render で New → Blueprint → リポジトリ接続
+3. 自動で`render.yaml`が読まれてデプロイされます
 
 ## ローカル実行
-
-```bash
+```
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```
-
-→ `http://localhost:8000/api/streams/dQw4w9WgXcQ`
-
-## 注意
-
-- YouTube側のレート制限やIPブロックを受ける可能性があります (Render無料プランは特に)
-- 必要に応じて `yt_dlp` の `cookiefile` オプションなどを追加してください
